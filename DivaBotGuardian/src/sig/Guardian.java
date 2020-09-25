@@ -1,15 +1,35 @@
 package sig;
 import java.awt.Color;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONObject;
+
 import sig.utils.FileUtils;
+import sig.utils.ImageUtils;
 
 public class Guardian {
 	public static int USERID = -1;
@@ -19,11 +39,13 @@ public class Guardian {
 	
 	public static Point UPPERLEFTCORNER = null;
 	public static Point LOWERRIGHTCORNER = null;
+	public static boolean RESULTSSCREEN = false;
 	
 	enum STAGE{
 		STARTING,
 		CALIBRATING,
 		RUNNING,
+		SUBMIT,
 		CLEANUP;
 	}
 	
@@ -31,40 +53,46 @@ public class Guardian {
 		Point crop1 = null;
 		Point crop2 = null;
 		
-		Color col = new Color(img.getRGB(0, 0));
-		if (col.getRed()<=5&&col.getGreen()<=5&&col.getBlue()<=5) {
-			boolean done=false;
-			for (int x=img.getWidth()-1;x>=img.getWidth()*(7f/8);x--) {
-				for (int y=0;y<img.getHeight()/8;y++) {
-					col = new Color(img.getRGB(x, y));
-					if (col.getRed()>=5&&col.getGreen()>=5&&col.getBlue()>=5) {
-						crop1 = new Point(x,y);
-						done=true;
-						break;
+		boolean done=false;
+		for (int x=img.getWidth()-1;x>=img.getWidth()*(7f/8);x--) {
+			for (int y=0;y<img.getHeight()/8;y++) {
+				Color col = new Color(img.getRGB(x, y));
+				if (col.getRed()>=100&&col.getGreen()>=100&&col.getBlue()>=100) {
+					while (col.getRed()+col.getGreen()+col.getBlue()>=15) {
+						y--;
+						col = new Color(img.getRGB(x, y));
 					}
-				}
-				if (done) {
+					crop1 = new Point(x,y);
+					done=true;
 					break;
 				}
 			}
-			done=false;
-			for (int x=0;x<img.getWidth()/8;x++) {
-				for (int y=img.getHeight()-1;y>=img.getHeight()*(7f/8);y--) {
-					col = new Color(img.getRGB(x, y));
-					if (col.getRed()>=5&&col.getGreen()>=5&&col.getBlue()>=5) {
-						crop2 = new Point(x,y);
-						done=true;
-						break;
-					}
-				}
-				if (done) {
-					break;
-				}
+			if (done) {
+				break;
 			}
-			UPPERLEFTCORNER=new Point(crop2.x,crop1.y);
-			LOWERRIGHTCORNER=new Point(crop1.x,crop2.y);
-			//img = img.getSubimage(crop2.x, crop1.y, crop1.x-crop2.x, crop2.y-crop1.y);
 		}
+		done=false;
+		for (int x=0;x<img.getWidth()/8;x++) {
+			for (int y=img.getHeight()-1;y>=img.getHeight()*(7f/8);y--) {
+				Color col = new Color(img.getRGB(x, y));
+				if (col.getRed()>=100&&col.getGreen()>=100&&col.getBlue()>=100) {
+					while (col.getRed()+col.getGreen()+col.getBlue()>=15) {
+						y++;
+						col = new Color(img.getRGB(x, y));
+					}
+					crop2 = new Point(x,y);
+					done=true;
+					break;
+				}
+			}
+			if (done) {
+				break;
+			}
+		}
+		UPPERLEFTCORNER=new Point(crop2.x,crop1.y);
+		LOWERRIGHTCORNER=new Point(crop1.x,crop2.y);
+		img = img.getSubimage(crop2.x, crop1.y, crop1.x-crop2.x, crop2.y-crop1.y);
+		ImageIO.write(img,"png",new File("cropped.png"));
 		//System.out.println("Future Tone? "+MyRobot.FUTURETONE);
 		return img;
 	}
@@ -123,10 +151,123 @@ public class Guardian {
 							//1280x720
 							ColorRegion cr = new ColorRegion(img,new Rectangle(scale1280(772),scale720(175),5,5));
 							System.out.println(UPPERLEFTCORNER+","+LOWERRIGHTCORNER+"///"+"Is Song select? "+cr.getAllRange(160,200,0,15,170,200)+" "+cr+" ("+(System.currentTimeMillis()-startTime)+"ms)");
+							if (isOnSongSelect(img)) {
+								RESULTSSCREEN = false;
+							} else {
+								//607,365  92x19
+								//ColorRegion(Region: java.awt.Rectangle[x=608,y=374,width=92,height=19],R:149,G:107,B:183)
+								//System.out.println(cr);
+								if (!RESULTSSCREEN) {
+									if (OnResultsScreen(img)) {
+										if (ReadytoSubmit(img)) {
+											Thread.sleep(500);
+											currentStage=STAGE.SUBMIT;
+											RESULTSSCREEN=true;
+										}
+									}
+								}
+							}
+							//System.out.println(UPPERLEFTCORNER+","+LOWERRIGHTCORNER+"///"+"Is Song select? "+cr.getAllRange(160,200,0,15,170,200)+" "+cr+" ("+(System.currentTimeMillis()-startTime)+"ms)");
 						} catch (IOException | InvocationTargetException | NullPointerException e) {
 							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
 						}
 						FRAMECOUNT=(FRAMECOUNT+1)%10;
+						Thread.sleep(100);
+					}
+				}break;
+				case SUBMIT:{
+					while (currentStage==STAGE.SUBMIT) {
+						long startTime = System.currentTimeMillis();
+						try {
+							HttpClient httpclient = HttpClients.createDefault();
+							HttpPost httppost = new HttpPost("http://45.33.13.215:4501/getUserAuthData");
+							List<NameValuePair> params = new ArrayList<NameValuePair>();
+							params.add(new BasicNameValuePair("password", FileUtils.readFromFile(".guardian_env")[0]));
+							params.add(new BasicNameValuePair("userId", Integer.toString(USERID)));
+							try {
+								httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+							} catch (UnsupportedEncodingException e) {
+								e.printStackTrace();
+							}
+							//Execute and get the response.
+							HttpResponse response = null;
+							try {
+								response = httpclient.execute(httppost);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							HttpEntity entity = response.getEntity();
+							
+							JSONObject report = null;
+
+							if (entity != null) {
+							    try (InputStream instream = entity.getContent()) {
+							    	Scanner s = new Scanner(instream).useDelimiter("\\A");
+							    	String result = s.hasNext() ? s.next() : "";
+							    	report=new JSONObject(result);
+							    	instream.close();
+							    } catch (UnsupportedOperationException | IOException e) {
+									e.printStackTrace();
+								}
+							}
+							
+							Process proc = Runtime.getRuntime().exec("cp streams/output"+USERID+".png ../server/files/plays/"+USERID+"/"+report.getInt("uploads"));
+							BufferedReader stdInput = new BufferedReader(new 
+								     InputStreamReader(proc.getInputStream()));
+
+							BufferedReader stdError = new BufferedReader(new 
+							     InputStreamReader(proc.getErrorStream()));
+							
+							String output = null;
+							while ((output = stdInput.readLine()) != null) {
+							    System.out.println(output);
+							}
+							System.out.println("------------");
+							while ((output = stdError.readLine()) != null) {
+							    System.out.println(output);
+							}
+							//HandleStreamFile(f, new File(userFolder,Integer.toString(report.getInt("uploads"))));
+							
+							httpclient = HttpClients.createDefault();
+							httppost = new HttpPost("http://projectdivar.com/passImageData");
+							params = new ArrayList<NameValuePair>();
+							params.add(new BasicNameValuePair("user", report.getString("username")));
+							params.add(new BasicNameValuePair("auth", report.getString("authentication_token")));
+							params.add(new BasicNameValuePair("url", "http://projectdivar.com/files/plays/"+USERID+"/"+report.getInt("uploads")));
+							try {
+								httppost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+							} catch (UnsupportedEncodingException e) {
+								e.printStackTrace();
+							}
+							//Execute and get the response.
+							response = null;
+							try {
+								response = httpclient.execute(httppost);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+							entity = response.getEntity();
+							
+							report = null;
+
+							if (entity != null) {
+							    try (InputStream instream = entity.getContent()) {
+							    	Scanner s = new Scanner(instream).useDelimiter("\\A");
+							    	String result = s.hasNext() ? s.next() : "";
+							    	report=new JSONObject(result);
+							    	instream.close();
+							    } catch (UnsupportedOperationException | IOException e) {
+									e.printStackTrace();
+								}
+							}
+							
+							System.out.println(report);
+							
+							currentStage=STAGE.RUNNING;
+						} catch (IOException | NullPointerException e) {
+							e.printStackTrace();
+							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
+						}
 						Thread.sleep(100);
 					}
 				}break;
@@ -139,9 +280,34 @@ public class Guardian {
 		}
 	}
 
+	private static boolean ReadytoSubmit(BufferedImage img) {
+		ColorRegion cr = new ColorRegion(img,new Rectangle(scale1280(607),scale720(365),92,19));
+		ColorRegion cr2 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(335),65,21));
+		ColorRegion cr3 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(302),79,21));
+		ColorRegion cr4 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(267),68,21));
+		ColorRegion cr5 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(234),80,20));
+		// ColorRegion(Region: java.awt.Rectangle[x=608,y=374,width=92,height=19],R:149,G:107,B:183)
+		return cr.getAllRange(120,170,75,130,150,210)&&
+				cr2.getAllRange(10,100,75,130,100,200)&&
+				cr3.getAllRange(50,140,150,210,70,130)&&
+				cr4.getAllRange(80,140,120,180,130,190)&&
+				cr5.getAllRange(150,220,150,220,70,140);
+	}
+
+	private static boolean OnResultsScreen(BufferedImage img) {
+		ColorRegion ft_results = new ColorRegion(img,new Rectangle(scale1280(81),scale720(35),80,37));
+		System.out.println(" "+ft_results);
+		return ft_results.getAllRange(30,150,60,180,60,180);
+	}
+
+	private static boolean isOnSongSelect(BufferedImage img) {
+		ColorRegion cr = new ColorRegion(img,new Rectangle(scale1280(772),scale720(175),5,5));
+		return cr.getAllRange(160,200,0,15,170,200);
+	}
+
 	private static void HandleStreamFile(File f, File tempf) throws IOException, InvocationTargetException {
 		FileUtils.copyFile(f, tempf);
-		System.out.println(System.currentTimeMillis()+"/"+streamLastModified);
+		//System.out.println(System.currentTimeMillis()+"/"+streamLastModified);
 		if (System.currentTimeMillis()>=streamLastModified+5000) {
 			currentStage=STAGE.CLEANUP;
 			System.out.println("Stream is no longer being updated! Shutting down!");
