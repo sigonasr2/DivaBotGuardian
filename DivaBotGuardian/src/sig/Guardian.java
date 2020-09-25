@@ -16,11 +16,11 @@ public class Guardian {
 	}
 	
 	public static void main(String[] args) throws InterruptedException, IOException {
+		USERID = Integer.parseInt(args[0]);
 		File f = new File("streams","output"+USERID+".png");
 		File tempf = new File("streams","tempoutput"+USERID+".png");
 		switch (currentStage) {
 			case STARTING:{
-				USERID = Integer.parseInt(args[0]);
 				while (currentStage==STAGE.STARTING) {
 					if (f.exists()) {
 						streamLastModified = f.lastModified();
