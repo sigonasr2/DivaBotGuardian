@@ -54,13 +54,21 @@ public class Guardian {
 		Point crop2 = null;
 		
 		boolean done=false;
-		for (int x=img.getWidth()-1;x>=img.getWidth()*(7f/8);x--) {
-			for (int y=0;y<img.getHeight()/8;y++) {
+		for (int x=img.getWidth()-1;x>=img.getWidth()*(5f/8);x--) {
+			for (int y=272;y<273;y++) {
 				Color col = new Color(img.getRGB(x, y));
+				Color lastcol = col;
 				if (col.getRed()>=100&&col.getGreen()>=100&&col.getBlue()>=100) {
-					while (col.getRed()+col.getGreen()+col.getBlue()>=15) {
+					while (col.getRed()+col.getGreen()+col.getBlue()>30||(col.getRed()+col.getGreen()+col.getBlue()>10&&(col.getRed()!=col.getGreen()||col.getGreen()!=col.getBlue()||col.getRed()!=col.getBlue()))) {
+						lastcol = col;
 						y--;
 						col = new Color(img.getRGB(x, y));
+					}
+					if (y>=0) {
+						col = new Color(img.getRGB(x, y));
+					} else {
+						y++;
+						break;
 					}
 					crop1 = new Point(x,y);
 					done=true;
@@ -72,13 +80,20 @@ public class Guardian {
 			}
 		}
 		done=false;
-		for (int x=0;x<img.getWidth()/8;x++) {
-			for (int y=img.getHeight()-1;y>=img.getHeight()*(7f/8);y--) {
+		for (int x=0;x<img.getWidth()*(3f/8);x++) {
+			for (int y=530;y>=529;y--) {
 				Color col = new Color(img.getRGB(x, y));
+				Color lastcol = col;
 				if (col.getRed()>=100&&col.getGreen()>=100&&col.getBlue()>=100) {
-					while (col.getRed()+col.getGreen()+col.getBlue()>=15) {
+					while (col.getRed()+col.getGreen()+col.getBlue()>30||(col.getRed()+col.getGreen()+col.getBlue()>10&&(col.getRed()!=col.getGreen()||col.getGreen()!=col.getBlue()||col.getRed()!=col.getBlue()))) {
+						lastcol = col;
 						y++;
-						col = new Color(img.getRGB(x, y));
+						if (y<img.getHeight()-1) {
+							col = new Color(img.getRGB(x, y));
+						} else {
+							y--;
+							break;
+						}
 					}
 					crop2 = new Point(x,y);
 					done=true;
@@ -210,15 +225,33 @@ public class Guardian {
 									e.printStackTrace();
 								}
 							}
-							
-							Process proc = Runtime.getRuntime().exec("cp streams/output"+USERID+".png ../server/files/plays/"+USERID+"/"+report.getInt("uploads"));
+							File scoreFile = new File("streams","score"+USERID+".png");
+							HandleStreamFile(f, scoreFile);
+							ImageIO.write(ImageIO.read(scoreFile).getSubimage(UPPERLEFTCORNER.x, UPPERLEFTCORNER.y, LOWERRIGHTCORNER.x-UPPERLEFTCORNER.x, LOWERRIGHTCORNER.y-UPPERLEFTCORNER.y),"png",scoreFile);
+							Process proc2 = Runtime.getRuntime().exec("mkdir ../server/files/plays/"+USERID);
 							BufferedReader stdInput = new BufferedReader(new 
-								     InputStreamReader(proc.getInputStream()));
+								     InputStreamReader(proc2.getInputStream()));
 
 							BufferedReader stdError = new BufferedReader(new 
+							     InputStreamReader(proc2.getErrorStream()));
+
+							String output = null;
+							while ((output = stdInput.readLine()) != null) {
+							    System.out.println(output);
+							}
+							System.out.println("------------");
+							while ((output = stdError.readLine()) != null) {
+							    System.out.println(output);
+							}
+							System.out.println("------------");
+							Process proc = Runtime.getRuntime().exec("cp streams/score"+USERID+".png ../server/files/plays/"+USERID+"/"+report.getInt("uploads"));
+							stdInput = new BufferedReader(new 
+								     InputStreamReader(proc.getInputStream()));
+
+							stdError = new BufferedReader(new 
 							     InputStreamReader(proc.getErrorStream()));
 							
-							String output = null;
+							output = null;
 							while ((output = stdInput.readLine()) != null) {
 							    System.out.println(output);
 							}
@@ -264,7 +297,7 @@ public class Guardian {
 							System.out.println(report);
 							
 							currentStage=STAGE.RUNNING;
-						} catch (IOException | NullPointerException e) {
+						} catch (IOException | NullPointerException | InvocationTargetException e) {
 							e.printStackTrace();
 							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
 						}
@@ -281,17 +314,22 @@ public class Guardian {
 	}
 
 	private static boolean ReadytoSubmit(BufferedImage img) {
-		ColorRegion cr = new ColorRegion(img,new Rectangle(scale1280(607),scale720(365),92,19));
-		ColorRegion cr2 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(335),65,21));
-		ColorRegion cr3 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(302),79,21));
-		ColorRegion cr4 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(267),68,21));
-		ColorRegion cr5 = new ColorRegion(img,new Rectangle(scale1280(607),scale720(234),80,20));
+		IgnoredColorRegion cr = new IgnoredColorRegion(img,new Rectangle(scale1280(606),scale720(371),92,19));
+		IgnoredColorRegion cr2 = new IgnoredColorRegion(img,new Rectangle(scale1280(607),scale720(335),65,21));
+		IgnoredColorRegion cr3 = new IgnoredColorRegion(img,new Rectangle(scale1280(607),scale720(302),79,21));
+		IgnoredColorRegion cr4 = new IgnoredColorRegion(img,new Rectangle(scale1280(607),scale720(267),68,21));
+		IgnoredColorRegion cr5 = new IgnoredColorRegion(img,new Rectangle(scale1280(607),scale720(234),80,20));
 		// ColorRegion(Region: java.awt.Rectangle[x=608,y=374,width=92,height=19],R:149,G:107,B:183)
+		System.out.println("  "+cr);
+		System.out.println("  "+cr2);
+		System.out.println("  "+cr3);
+		System.out.println("  "+cr4);
+		System.out.println("  "+cr5);
 		return cr.getAllRange(120,170,75,130,150,210)&&
-				cr2.getAllRange(10,100,75,130,100,200)&&
-				cr3.getAllRange(50,140,150,210,70,130)&&
-				cr4.getAllRange(80,140,120,180,130,190)&&
-				cr5.getAllRange(150,220,150,220,70,140);
+				cr2.getAllRange(50,150,75,150,100,200)&&
+				cr3.getAllRange(50,170,150,240,100,170)&&
+				cr4.getAllRange(100,160,140,200,140,200)&&
+				cr5.getAllRange(150,220,150,220,100,180);
 	}
 
 	private static boolean OnResultsScreen(BufferedImage img) {
