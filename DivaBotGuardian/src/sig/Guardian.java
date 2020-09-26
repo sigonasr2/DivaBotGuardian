@@ -135,11 +135,11 @@ public class Guardian {
 			tempf[i] = new File("streams","tempoutput"+i+"_"+USERID+".png");
 		}
 		
-		typeface = new TypeFace2(ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface.png")),
-				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface2.png")),
-				ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface3.png")),
-				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface4.png")),
-				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface5.png")));
+		typeface = new TypeFace2(ImageIO.read(new File("./DivaBotGuardian/DivaBotGuardian/typeface.png")),
+				 ImageIO.read(new File("./DivaBotGuardian/DivaBotGuardian/typeface2.png")),
+				ImageIO.read(new File("./DivaBotGuardian/DivaBotGuardian/typeface3.png")),
+				 ImageIO.read(new File("./DivaBotGuardian/DivaBotGuardian/typeface4.png")),
+				 ImageIO.read(new File("./DivaBotGuardian/DivaBotGuardian/typeface5.png")));
 		
  		program:
 		while (true) {
