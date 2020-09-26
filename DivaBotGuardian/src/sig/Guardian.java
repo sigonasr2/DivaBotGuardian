@@ -26,6 +26,7 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import sig.utils.FileUtils;
@@ -40,6 +41,8 @@ public class Guardian {
 	public static Point UPPERLEFTCORNER = null;
 	public static Point LOWERRIGHTCORNER = null;
 	public static boolean RESULTSSCREEN = false;
+	
+	public static TypeFace2 typeface;
 	
 	enum STAGE{
 		STARTING,
@@ -62,13 +65,12 @@ public class Guardian {
 					while (col.getRed()+col.getGreen()+col.getBlue()>30||(col.getRed()+col.getGreen()+col.getBlue()>10&&(col.getRed()!=col.getGreen()||col.getGreen()!=col.getBlue()||col.getRed()!=col.getBlue()))) {
 						lastcol = col;
 						y--;
-						col = new Color(img.getRGB(x, y));
-					}
-					if (y>=0) {
-						col = new Color(img.getRGB(x, y));
-					} else {
-						y++;
-						break;
+						if (y>=0) {
+							col = new Color(img.getRGB(x, y));
+						} else {
+							y++;
+							break;
+						}
 					}
 					crop1 = new Point(x,y);
 					done=true;
@@ -133,6 +135,12 @@ public class Guardian {
 			tempf[i] = new File("streams","tempoutput"+i+"_"+USERID+".png");
 		}
 		
+		typeface = new TypeFace2(ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface.png")),
+				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface2.png")),
+				ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface3.png")),
+				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface4.png")),
+				 ImageIO.read(new File("DivaBotGuardian/DivaBotGuardian/typeface5.png")));
+		
  		program:
 		while (true) {
 			switch (currentStage) {
@@ -175,16 +183,21 @@ public class Guardian {
 								if (!RESULTSSCREEN) {
 									if (OnResultsScreen(img)) {
 										if (ReadytoSubmit(img)) {
-											Thread.sleep(500);
-											currentStage=STAGE.SUBMIT;
-											RESULTSSCREEN=true;
+											//Thread.sleep(500);
+											MyRobot.FUTURETONE=true;
+											Result r = typeface.getAllData(CropFutureToneImage(img));
+											if (!(r.cool==-1 || r.fine==-1 || r.safe==-1 || r.sad==-1 || r.worst==-1 || r.percent<0f || r.percent>110f || r.combo==-1 || r.score==-1)) {
+												currentStage=STAGE.SUBMIT;
+											} else {
+												System.out.println("Waiting for results to populate... "+r);
+											}
 										}
 									}
 								}
 							}
 							//System.out.println(UPPERLEFTCORNER+","+LOWERRIGHTCORNER+"///"+"Is Song select? "+cr.getAllRange(160,200,0,15,170,200)+" "+cr+" ("+(System.currentTimeMillis()-startTime)+"ms)");
-						} catch (IOException | InvocationTargetException | NullPointerException e) {
-							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
+						} catch (Exception e) {
+							System.out.println("Skip error frame.  " +e.getMessage()+  " ("+(System.currentTimeMillis()-startTime)+"ms)");
 						}
 						FRAMECOUNT=(FRAMECOUNT+1)%10;
 						Thread.sleep(100);
@@ -294,10 +307,12 @@ public class Guardian {
 								}
 							}
 							
+
+							RESULTSSCREEN=true;
 							System.out.println(report);
 							
 							currentStage=STAGE.RUNNING;
-						} catch (IOException | NullPointerException | InvocationTargetException e) {
+						} catch (IOException | NullPointerException | InvocationTargetException | JSONException e) {
 							e.printStackTrace();
 							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
 						}
@@ -325,11 +340,11 @@ public class Guardian {
 		System.out.println("  "+cr3);
 		System.out.println("  "+cr4);
 		System.out.println("  "+cr5);
-		return cr.getAllRange(120,170,75,130,150,210)&&
-				cr2.getAllRange(50,150,75,150,100,200)&&
-				cr3.getAllRange(50,170,150,240,100,170)&&
-				cr4.getAllRange(100,160,140,200,140,200)&&
-				cr5.getAllRange(150,220,150,220,100,180);
+		return cr.getAllRange(115,170,60,130,150,210)&&
+				cr2.getAllRange(40,150,75,150,100,200)&&
+				cr3.getAllRange(50,170,150,240,60,170)&&
+				cr4.getAllRange(95,160,135,200,140,200)&&
+				cr5.getAllRange(150,220,150,220,80,180);
 	}
 
 	private static boolean OnResultsScreen(BufferedImage img) {
