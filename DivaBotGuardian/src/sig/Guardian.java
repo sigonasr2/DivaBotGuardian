@@ -129,6 +129,10 @@ public class Guardian {
 		if (f.exists()) {
 			f.delete();
 		}
+		f = new File("./www/cropped/cropped"+USERID+".png");
+		if (f.exists()) {
+			f.delete();
+		}
 		File[] tempf = new File[10];
 		
 		for (int i=0;i<tempf.length;i++) {
