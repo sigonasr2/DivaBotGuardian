@@ -109,7 +109,7 @@ public class Guardian {
 		UPPERLEFTCORNER=new Point(crop2.x,crop1.y);
 		LOWERRIGHTCORNER=new Point(crop1.x,crop2.y);
 		img = img.getSubimage(crop2.x, crop1.y, crop1.x-crop2.x, crop2.y-crop1.y);
-		ImageIO.write(img,"png",new File("cropped.png"));
+		ImageIO.write(img,"png",new File("/var/www/html/divar/cropped/cropped"+USERID+".png"));
 		//System.out.println("Future Tone? "+MyRobot.FUTURETONE);
 		return img;
 	}
