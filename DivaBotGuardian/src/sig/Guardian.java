@@ -1,5 +1,6 @@
 package sig;
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -109,6 +110,7 @@ public class Guardian {
 		UPPERLEFTCORNER=new Point(crop2.x,crop1.y);
 		LOWERRIGHTCORNER=new Point(crop1.x,crop2.y);
 		img = img.getSubimage(crop2.x, crop1.y, crop1.x-crop2.x, crop2.y-crop1.y);
+		System.out.println(new File("./www/cropped/cropped"+USERID+".png").getAbsolutePath());
 		ImageIO.write(img,"png",new File("./www/cropped/cropped"+USERID+".png"));
 		//System.out.println("Future Tone? "+MyRobot.FUTURETONE);
 		return img;
@@ -126,10 +128,10 @@ public class Guardian {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		USERID = Integer.parseInt(args[0]);
 		File f = new File("streams","output"+USERID+".png");
-		if (f.exists()) {
-			f.delete();
+		File cropped = new File("./www/cropped/cropped"+USERID+".png");
+		if (cropped.exists()) {
+			cropped.delete();
 		}
-		f = new File("./www/cropped/cropped"+USERID+".png");
 		if (f.exists()) {
 			f.delete();
 		}
@@ -211,6 +213,8 @@ public class Guardian {
 					while (currentStage==STAGE.SUBMIT) {
 						long startTime = System.currentTimeMillis();
 						try {
+							RESULTSSCREEN=true;
+							currentStage=STAGE.RUNNING;
 							HttpClient httpclient = HttpClients.createDefault();
 							HttpPost httppost = new HttpPost("http://45.33.13.215:4501/getUserAuthData");
 							List<NameValuePair> params = new ArrayList<NameValuePair>();
@@ -244,7 +248,13 @@ public class Guardian {
 							}
 							File scoreFile = new File("streams","score"+USERID+".png");
 							HandleStreamFile(f, scoreFile);
-							ImageIO.write(ImageIO.read(scoreFile).getSubimage(UPPERLEFTCORNER.x, UPPERLEFTCORNER.y, LOWERRIGHTCORNER.x-UPPERLEFTCORNER.x, LOWERRIGHTCORNER.y-UPPERLEFTCORNER.y),"png",scoreFile);
+							BufferedImage scoreImg = ImageIO.read(scoreFile).getSubimage(UPPERLEFTCORNER.x, UPPERLEFTCORNER.y, LOWERRIGHTCORNER.x-UPPERLEFTCORNER.x, LOWERRIGHTCORNER.y-UPPERLEFTCORNER.y);
+							BufferedImage newImage = new BufferedImage(scoreImg.getWidth()+64,scoreImg.getHeight()+64,BufferedImage.TYPE_INT_ARGB);
+							Graphics g = newImage.getGraphics();
+							g.setColor(Color.BLACK);
+							g.clearRect(0,0,scoreImg.getWidth()+64,scoreImg.getHeight()+64);
+							g.drawImage(scoreImg, 32, 32, null);
+							ImageIO.write(newImage,"png",scoreFile);
 							Process proc2 = Runtime.getRuntime().exec("mkdir ../server/files/plays/"+USERID);
 							BufferedReader stdInput = new BufferedReader(new 
 								     InputStreamReader(proc2.getInputStream()));
@@ -312,10 +322,7 @@ public class Guardian {
 							}
 							
 
-							RESULTSSCREEN=true;
 							System.out.println(report);
-							
-							currentStage=STAGE.RUNNING;
 						} catch (IOException | NullPointerException | InvocationTargetException | JSONException e) {
 							e.printStackTrace();
 							System.out.println("Skip error frame.("+(System.currentTimeMillis()-startTime)+"ms)");
